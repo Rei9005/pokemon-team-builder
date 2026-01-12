@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PokeapiModule } from './pokeapi/pokeapi.module';
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { AppService } from './app.service';
       isGlobal: true,
     }),
     PrismaModule,
+    PokeapiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
