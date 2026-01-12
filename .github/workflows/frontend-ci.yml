@@ -5,11 +5,13 @@ on:
     branches: [main, develop]
     paths:
       - 'frontend/**'
+      - 'package-lock.json'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'frontend/**'
+      - 'package-lock.json'
       - '.github/workflows/frontend-ci.yml'
 
 defaults:
@@ -34,10 +36,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
+        working-directory: .
 
       - name: Run ESLint
         run: npm run lint
