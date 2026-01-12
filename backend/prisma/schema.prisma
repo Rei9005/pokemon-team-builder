@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  teams     Team[]
+
+  @@map("users")
+}
+
+model Team {
+  id        String        @id @default(uuid())
+  userId    String
+  name      String        @db.VarChar(100)
+  isPublic  Boolean       @default(false)
+  shareId   String?       @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pokemon   TeamPokemon[]
+
+  @@index([userId])
+  @@index([shareId])
+  @@map("teams")
+}
+
+model TeamPokemon {
+  id        String   @id @default(uuid())
+  teamId    String
+  pokemonId Int
+  position  Int
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, position])
+  @@index([teamId])
+  @@map("team_pokemon")
+}
