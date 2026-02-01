@@ -39,7 +39,7 @@ const mockPokemonResponses: Record<
       'special-defense': 64,
       speed: 43,
     }),
-    species: buildMockSpecies('generation-i', 'ゲンガル'),
+    species: buildMockSpecies('generation-i', 'ゼニガメ'),
   },
 };
 
