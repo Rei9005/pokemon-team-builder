@@ -6,7 +6,7 @@ import {
   PokemonStatsDto,
 } from './dto/pokemon.dto';
 
-interface CachedPokemon {
+export interface CachedPokemon {
   id: number;
   nameEn: string;
   name: string;
@@ -120,6 +120,13 @@ export class PokemonService implements OnModuleInit {
   private extractGeneration(genName: string): number {
     const match = genName.match(/generation-(\d+)/);
     return match ? parseInt(match[1], 10) : 0;
+  }
+
+  /**
+   * Retrieves a Pokemon from cache by ID (used by TypeService for type lookups)
+   */
+  getByIdFromCache(id: number): CachedPokemon | undefined {
+    return this.cache.find((p) => p.id === id);
   }
 
   /**
