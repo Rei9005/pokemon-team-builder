@@ -5,6 +5,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PokeapiModule } from './pokeapi/pokeapi.module';
 import { TypeModule } from './type/type.module';
+import { AuthModule } from './auth/auth.module';
+import { TeamModule } from './team/team.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { TypeModule } from './type/type.module';
     PrismaModule,
     PokeapiModule,
     TypeModule,
+    AuthModule,
+    TeamModule,
   ],
   controllers: [AppController],
   providers: [AppService],
