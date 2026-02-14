@@ -1,5 +1,5 @@
 import type { SignupResponse, LoginResponse } from '@/types/auth';
-import type { PokemonListResponse } from '@/types/pokemon';
+import type { PokemonListResponse, PokemonDetail } from '@/types/pokemon';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -61,5 +61,9 @@ export const api = {
     if (params.search) query.set('search', params.search);
 
     return fetchApi<PokemonListResponse>(`/pokemon?${query}`);
+  },
+
+  getPokemonDetail: async (id: number): Promise<PokemonDetail> => {
+    return fetchApi<PokemonDetail>(`/pokemon/${id}`);
   },
 };

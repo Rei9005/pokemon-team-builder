@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { PokemonCard } from '@/components/pokemon/PokemonCard';
-import type { Pokemon } from '@/types/pokemon';
+import { PokemonDetailModal } from '@/components/pokemon/PokemonDetailModal';
+import type { Pokemon, PokemonDetail } from '@/types/pokemon';
 
 export default function PokemonListPage() {
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
@@ -13,6 +14,11 @@ export default function PokemonListPage() {
   const [type, setType] = useState<string | undefined>();
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPokemon, setSelectedPokemon] = useState<PokemonDetail | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   useEffect(() => {
     const fetchPokemon = async () => {
@@ -36,6 +42,27 @@ export default function PokemonListPage() {
 
     fetchPokemon();
   }, [page, generation, type, search]);
+
+  // Handle card click
+  const handleCardClick = async (pokemonId: number) => {
+    setIsLoadingDetail(true);
+    try {
+      const detail = await api.getPokemonDetail(pokemonId);
+      setSelectedPokemon(detail);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch pokemon detail:', error);
+      alert('Failed to load pokemon details');
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  // Handle modal close
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedPokemon(null);
+  };
 
   return (
     <div className="container mx-auto p-4 max-w-7xl">
@@ -106,7 +133,11 @@ export default function PokemonListPage() {
           {/* Pokemon Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {pokemon.map((p) => (
-              <PokemonCard key={p.id} pokemon={p} />
+              <PokemonCard
+                key={p.id}
+                pokemon={p}
+                onClick={() => handleCardClick(p.id)}
+              />
             ))}
           </div>
 
@@ -133,6 +164,20 @@ export default function PokemonListPage() {
             </button>
           </div>
         </>
+      )}
+
+      {/* Detail Modal */}
+      {isModalOpen && selectedPokemon && (
+        <PokemonDetailModal pokemon={selectedPokemon} onClose={handleCloseModal} />
+      )}
+
+      {/* Loading overlay for detail fetch */}
+      {isLoadingDetail && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6">
+            <p className="text-gray-700">Loading details...</p>
+          </div>
+        </div>
       )}
     </div>
   );
