@@ -19,7 +19,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push('/pokemon');
+      router.push('/');
     } catch (err) {
       setError('Login failed. Please check your credentials.');
       console.error('Login error:', err);

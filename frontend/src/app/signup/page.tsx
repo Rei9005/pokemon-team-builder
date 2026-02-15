@@ -19,7 +19,7 @@ export default function SignupPage() {
 
     try {
       await signup(email, password);
-      router.push('/pokemon');
+      router.push('/');
     } catch (err) {
       setError('Signup failed. Please try again.');
       console.error('Signup error:', err);
