@@ -78,6 +78,31 @@ export class AuthService {
     };
   }
 
+  async verifyToken(token: string): Promise<{ id: string; email: string }> {
+    try {
+      // Verify JWT token
+      const payload = this.jwtService.verify<{ sub: string; email: string }>(
+        token,
+      );
+
+      // Find user in database
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid token');
+    }
+  }
+
   private generateToken(userId: string, email: string): string {
     const payload = { sub: userId, email };
     return this.jwtService.sign(payload);

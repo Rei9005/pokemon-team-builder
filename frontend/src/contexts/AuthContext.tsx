@@ -20,8 +20,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check if user is logged in on mount
-    // For now, we'll assume not logged in
-    setIsLoading(false);
+    const checkAuth = async () => {
+      try {
+        const data = await api.getMe();
+        setUser(data.user);
+      } catch (error) {
+        // Not authenticated or token invalid
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {

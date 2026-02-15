@@ -57,7 +57,8 @@ export class TeamController {
   @ApiResponse({ status: 200, description: 'List of user teams' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findAll(@Request() req: AuthenticatedRequest) {
-    return this.teamService.findAllByUser(req.user.id);
+    const teams = await this.teamService.findAllByUser(req.user.id);
+    return { teams };
   }
 
   @Get(':id')

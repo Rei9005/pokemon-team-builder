@@ -22,6 +22,7 @@ describe('AuthService', () => {
 
   const mockJwtService = {
     sign: jest.fn(),
+    verify: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -185,6 +186,65 @@ describe('AuthService', () => {
       expect(bcrypt.compare).toHaveBeenCalledWith(
         loginDto.password,
         mockUser.password,
+      );
+    });
+  });
+
+  describe('verifyToken', () => {
+    const token = 'valid-jwt-token';
+    const userId = 'user-id';
+    const userEmail = 'test@example.com';
+
+    it('should verify token and return user', async () => {
+      const mockUser = {
+        id: userId,
+        email: userEmail,
+        password: 'hashed-password',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const mockPayload = {
+        sub: userId,
+        email: userEmail,
+      };
+
+      mockJwtService.verify.mockReturnValue(mockPayload);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.verifyToken(token);
+
+      expect(mockJwtService.verify).toHaveBeenCalledWith(token);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
+      expect(result).toEqual({
+        id: mockUser.id,
+        email: mockUser.email,
+      });
+    });
+
+    it('should throw UnauthorizedException if token is invalid', async () => {
+      mockJwtService.verify.mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
+
+      await expect(service.verifyToken('invalid-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should throw UnauthorizedException if user not found', async () => {
+      const mockPayload = {
+        sub: userId,
+        email: userEmail,
+      };
+
+      mockJwtService.verify.mockReturnValue(mockPayload);
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.verifyToken(token)).rejects.toThrow(
+        UnauthorizedException,
       );
     });
   });

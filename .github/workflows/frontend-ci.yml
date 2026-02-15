@@ -5,22 +5,20 @@ on:
     branches: [main, develop]
     paths:
       - 'frontend/**'
+      - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'frontend/**'
+      - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/frontend-ci.yml'
 
-defaults:
-  run:
-    working-directory: ./frontend
-
 jobs:
-  lint-and-build:
-    name: Lint, Type-Check, Build
+  lint-and-test:
+    name: Lint, Type-Check, Test, Build (frontend)
     runs-on: ubuntu-latest
 
     strategy:
@@ -28,35 +26,27 @@ jobs:
         node-version: [20.x]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
+      - name: Install dependencies (root, workspaces)
         run: npm ci
-        working-directory: .
 
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Run TypeScript type-check
-        run: npx tsc --noEmit
-
-      - name: Build
-        run: npm run build
+      - name: Build (patch SWC if needed)
+        run: npm run build --workspace=frontend
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
 
-      - name: Check build output
-        run: |
-          if [ ! -d ".next" ]; then
-            echo "❌ Build failed: .next directory not found"
-            exit 1
-          fi
-          echo "✅ Build successful"
+      - name: Run ESLint
+        run: npm run lint --workspace=frontend
+
+      - name: Run TypeScript type-check
+        run: npm -w frontend exec -- tsc --noEmit
+
+      - name: Run tests
+        run: npm test --workspace=frontend

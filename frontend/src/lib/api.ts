@@ -1,5 +1,11 @@
 import type { SignupResponse, LoginResponse } from '@/types/auth';
-import type { PokemonListResponse } from '@/types/pokemon';
+import type { PokemonListResponse, PokemonDetail } from '@/types/pokemon';
+import type {
+  TeamListResponse,
+  Team,
+  CreateTeamRequest,
+  UpdateTeamRequest,
+} from '@/types/team';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -20,8 +26,14 @@ export async function fetchApi<T>(
     throw new Error(`API Error: ${response.statusText}`);
   }
 
+  // Handle 204 No Content (e.g., DELETE responses)
+  if (response.status === 204) {
+    return {} as T;
+  }
+
   return response.json();
 }
+
 
 // Auth API
 export const api = {
@@ -45,6 +57,11 @@ export const api = {
     });
   },
 
+  // Get current user from cookie
+  getMe: async (): Promise<{ user: { id: string; email: string } }> => {
+    return fetchApi<{ user: { id: string; email: string } }>('/auth/me');
+  },
+
   // Pokemon API
   getPokemon: async (params: {
     page?: number;
@@ -61,5 +78,45 @@ export const api = {
     if (params.search) query.set('search', params.search);
 
     return fetchApi<PokemonListResponse>(`/pokemon?${query}`);
+  },
+
+  getPokemonDetail: async (id: number): Promise<PokemonDetail> => {
+    return fetchApi<PokemonDetail>(`/pokemon/${id}`);
+  },
+
+  // Team API
+  getTeams: async (): Promise<TeamListResponse> => {
+    return fetchApi<TeamListResponse>('/teams');
+  },
+
+  getTeam: async (teamId: string): Promise<Team> => {
+    return fetchApi<Team>(`/teams/${teamId}`);
+  },
+
+  createTeam: async (data: CreateTeamRequest): Promise<Team> => {
+    return fetchApi<Team>('/teams', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateTeam: async (
+    teamId: string,
+    data: UpdateTeamRequest
+  ): Promise<Team> => {
+    return fetchApi<Team>(`/teams/${teamId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteTeam: async (teamId: string): Promise<void> => {
+    return fetchApi<void>(`/teams/${teamId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getSharedTeam: async (shareId: string): Promise<Team> => {
+    return fetchApi<Team>(`/teams/share/${shareId}`);
   },
 };

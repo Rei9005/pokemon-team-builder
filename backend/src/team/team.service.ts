@@ -6,12 +6,16 @@ import {
 } from '@nestjs/common';
 import { nanoid } from 'nanoid';
 import { PrismaService } from '../prisma/prisma.service';
+import { PokemonService } from '../pokemon/pokemon.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 
 @Injectable()
 export class TeamService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private pokemonService: PokemonService,
+  ) {}
 
   async create(userId: string, dto: CreateTeamDto) {
     // Check if user has reached team limit (10 teams max)
@@ -66,7 +70,44 @@ export class TeamService {
       },
     });
 
-    return teams;
+    // Populate pokemon data from cache
+    const teamsWithPokemonData = teams.map((team) => {
+      const pokemonWithData = team.pokemon.map((tp) => {
+        const pokemonData = this.pokemonService.getByIdFromCache(tp.pokemonId);
+
+        if (!pokemonData) {
+          // Fallback: pokemon not found in cache
+          return {
+            ...tp,
+            pokemon: {
+              id: tp.pokemonId,
+              name: `Pokemon #${tp.pokemonId}`,
+              nameEn: `pokemon-${tp.pokemonId}`,
+              types: [],
+              sprite: '',
+            },
+          };
+        }
+
+        return {
+          ...tp,
+          pokemon: {
+            id: pokemonData.id,
+            name: pokemonData.name,
+            nameEn: pokemonData.nameEn,
+            types: pokemonData.types,
+            sprite: pokemonData.sprite,
+          },
+        };
+      });
+
+      return {
+        ...team,
+        pokemon: pokemonWithData,
+      };
+    });
+
+    return teamsWithPokemonData;
   }
 
   async findOne(teamId: string, userId?: string) {

@@ -24,3 +24,9 @@ export interface PokemonListResponse {
     totalPages: number;
   };
 }
+
+export interface PokemonDetail extends Pokemon {
+  abilities: string[];
+  height: number;
+  weight: number;
+}

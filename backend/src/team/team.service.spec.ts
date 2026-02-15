@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { TeamService } from './team.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PokemonService } from '../pokemon/pokemon.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 
@@ -23,6 +24,26 @@ describe('TeamService', () => {
     },
   };
 
+  const mockPokemonService = {
+    getByIdFromCache: jest.fn((id: number) => ({
+      id,
+      name: `Pokemon ${id}`,
+      nameEn: `pokemon-${id}`,
+      types: ['normal'],
+      sprite: `https://example.com/sprites/${id}.png`,
+      stats: {
+        hp: 50,
+        attack: 50,
+        defense: 50,
+        specialAttack: 50,
+        specialDefense: 50,
+        speed: 50,
+        total: 300,
+      },
+      generation: 1,
+    })),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -30,6 +51,10 @@ describe('TeamService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: PokemonService,
+          useValue: mockPokemonService,
         },
       ],
     }).compile();
