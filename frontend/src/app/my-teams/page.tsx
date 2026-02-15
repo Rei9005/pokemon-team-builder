@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { api } from '@/lib/api';
 import { TeamCard } from '@/components/team/TeamCard';
 import type { Team } from '@/types/team';
 
 export default function MyTeamsPage() {
   const { user, isLoading: authLoading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +35,7 @@ export default function MyTeamsPage() {
         setTeams(data.teams || []);
       } catch (err) {
         console.error('Failed to fetch teams:', err);
-        setError('Failed to load teams. Please try again.');
+        showToast('Failed to load teams. Please try again.', 'error');
         setTeams([]);
       } finally {
         setIsLoading(false);
@@ -41,16 +43,17 @@ export default function MyTeamsPage() {
     };
 
     fetchTeams();
-  }, [user]);
+  }, [user, showToast]);
 
   // Handle delete
   const handleDelete = async (teamId: string) => {
     try {
       await api.deleteTeam(teamId);
       setTeams(teams.filter((t) => t.id !== teamId));
+      showToast('Team deleted successfully', 'success');
     } catch (err) {
       console.error('Failed to delete team:', err);
-      alert('Failed to delete team. Please try again.');
+      showToast('Failed to delete team. Please try again.', 'error');
     }
   };
 

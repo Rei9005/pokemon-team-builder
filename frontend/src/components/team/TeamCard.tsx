@@ -1,5 +1,6 @@
 'use client';
 
+import { useToast } from '@/contexts/ToastContext';
 import type { Team } from '@/types/team';
 
 interface TeamCardProps {
@@ -8,15 +9,16 @@ interface TeamCardProps {
 }
 
 export function TeamCard({ team, onDelete }: TeamCardProps) {
+  const { showToast } = useToast();
   const handleShareClick = () => {
     if (!team.shareId) {
-      alert('This team is not public');
+      showToast('This team is not public', 'warning');
       return;
     }
 
     const shareUrl = `${window.location.origin}/teams/${team.shareId}`;
     navigator.clipboard.writeText(shareUrl);
-    alert('Share link copied to clipboard!');
+    showToast('Share link copied to clipboard!', 'success');
   };
 
   const handleEditClick = () => {

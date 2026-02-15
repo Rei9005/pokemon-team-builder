@@ -26,8 +26,14 @@ export async function fetchApi<T>(
     throw new Error(`API Error: ${response.statusText}`);
   }
 
+  // Handle 204 No Content (e.g., DELETE responses)
+  if (response.status === 204) {
+    return {} as T;
+  }
+
   return response.json();
 }
+
 
 // Auth API
 export const api = {
