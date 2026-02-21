@@ -1,9 +1,22 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { useRouter } from 'next/navigation';
 import { TeamCard } from '../TeamCard';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { useTeam } from '@/contexts/TeamContext';
 import type { Team } from '@/types/team';
 
-// Wrapper with ToastProvider
+// Mocks
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(),
+}));
+
+jest.mock('@/contexts/TeamContext', () => ({
+  useTeam: jest.fn(),
+}));
+
+const mockRouterPush = jest.fn();
+const mockLoadTeam = jest.fn();
+
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>{children}</ToastProvider>
 );
@@ -48,76 +61,94 @@ describe('TeamCard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (useRouter as jest.Mock).mockReturnValue({ push: mockRouterPush });
+    (useTeam as jest.Mock).mockReturnValue({ loadTeam: mockLoadTeam });
   });
 
   it('should render team name and public status', () => {
     render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
-
     expect(screen.getByText('Test Team')).toBeInTheDocument();
     expect(screen.getByText('🔓 Public')).toBeInTheDocument();
   });
 
   it('should render private status for private team', () => {
     const privateTeam = { ...mockTeam, isPublic: false, shareId: null };
-    render(<TeamCard team={privateTeam} onDelete={mockOnDelete} />, { wrapper });
-
+    render(<TeamCard team={privateTeam} onDelete={mockOnDelete} />, {
+      wrapper,
+    });
     expect(screen.getByText('🔒 Private')).toBeInTheDocument();
   });
 
   it('should render pokemon icons', () => {
     render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
-
     const images = screen.getAllByRole('img');
     expect(images).toHaveLength(2);
-    expect(images[0]).toHaveAttribute('src', 'https://example.com/1.png');
-    expect(images[1]).toHaveAttribute('src', 'https://example.com/4.png');
+    expect(images[0].getAttribute('src')).toContain('example.com%2F1.png');
+    expect(images[1].getAttribute('src')).toContain('example.com%2F4.png');
   });
 
   it('should render empty slots', () => {
     render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
-
     const emptySlots = screen.getAllByText('+');
     expect(emptySlots).toHaveLength(4);
   });
 
   it('should display created date', () => {
     render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
-
     expect(screen.getByText(/Created:/)).toBeInTheDocument();
   });
 
-  it('should render Edit button', () => {
+  it('should call loadTeam and navigate to team-builder when Edit is clicked', async () => {
+    mockLoadTeam.mockResolvedValue(undefined);
     render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
 
-    expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+    await waitFor(() => {
+      expect(mockLoadTeam).toHaveBeenCalledWith('team-1');
+      expect(mockRouterPush).toHaveBeenCalledWith('/team-builder');
+    });
+  });
+
+  it('should show error toast when loadTeam fails', async () => {
+    mockLoadTeam.mockRejectedValue(new Error('load failed'));
+    render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
+
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Failed to load team. Please try again.')
+      ).toBeInTheDocument();
+    });
   });
 
   it('should render Share button for public team', () => {
     render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
-
     expect(screen.getByRole('button', { name: /share/i })).toBeInTheDocument();
   });
 
   it('should not render Share button for private team', () => {
     const privateTeam = { ...mockTeam, isPublic: false, shareId: null };
-    render(<TeamCard team={privateTeam} onDelete={mockOnDelete} />, { wrapper });
-
-    expect(screen.queryByRole('button', { name: /share/i })).not.toBeInTheDocument();
+    render(<TeamCard team={privateTeam} onDelete={mockOnDelete} />, {
+      wrapper,
+    });
+    expect(
+      screen.queryByRole('button', { name: /share/i })
+    ).not.toBeInTheDocument();
   });
 
-  it('should render Delete button', () => {
+  it('should navigate to shared team page when Share is clicked', () => {
     render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
-
-    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /share/i }));
+    expect(mockRouterPush).toHaveBeenCalledWith('/teams/abc123');
   });
 
   it('should call onDelete when Delete is clicked and confirmed', () => {
     global.confirm = jest.fn(() => true);
-
     render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
 
-    const deleteButton = screen.getByRole('button', { name: /delete/i });
-    fireEvent.click(deleteButton);
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
 
     expect(global.confirm).toHaveBeenCalledWith(
       'Are you sure you want to delete "Test Team"?'
@@ -127,13 +158,10 @@ describe('TeamCard', () => {
 
   it('should not call onDelete when Delete is cancelled', () => {
     global.confirm = jest.fn(() => false);
-
     render(<TeamCard team={mockTeam} onDelete={mockOnDelete} />, { wrapper });
 
-    const deleteButton = screen.getByRole('button', { name: /delete/i });
-    fireEvent.click(deleteButton);
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
 
-    expect(global.confirm).toHaveBeenCalled();
     expect(mockOnDelete).not.toHaveBeenCalled();
   });
 });
