@@ -18,12 +18,22 @@ import { PartySlot } from '@/components/team/PartySlot';
 import { DraggablePokemonCard } from '@/components/team/DraggablePokemonCard';
 import { api, fetchApi } from '@/lib/api';
 import { TypeCoverageChart } from '@/components/team/TypeCoverageChart';
+import { SaveTeamModal } from '@/components/team/SaveTeamModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 const POKEMON_PER_PAGE = 24;
 
 export default function TeamBuilderPage() {
-  const { party, addPokemon, removePokemon, movePokemon, clearTeam } =
-    useTeam();
+  const {
+    party,
+    addPokemon,
+    removePokemon,
+    movePokemon,
+    clearTeam,
+    isEditing,
+    saveTeam,
+  } = useTeam();
+  const { user } = useAuth();
   const { showToast } = useToast();
 
   const [activePokemon, setActivePokemon] = useState<TeamPokemon | null>(null);
@@ -38,6 +48,7 @@ export default function TeamBuilderPage() {
     resistanceCount: number;
     immunityCount: number;
   } | null>(null);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -167,8 +178,20 @@ export default function TeamBuilderPage() {
     >
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Team Builder</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (!user) {
+                  showToast('Please log in to save your team', 'warning');
+                  return;
+                }
+                setIsSaveModalOpen(true);
+              }}
+              disabled={party.filter(Boolean).length === 0}
+              className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 font-medium"
+            >
+              {isEditing ? 'Update Team' : 'Save Team'}
+            </button>
             <button
               onClick={() => {
                 clearTeam();
@@ -285,6 +308,15 @@ export default function TeamBuilderPage() {
           </div>
         )}
       </DragOverlay>
+      <SaveTeamModal
+        isOpen={isSaveModalOpen}
+        isEditing={isEditing}
+        onClose={() => setIsSaveModalOpen(false)}
+        onSave={async (name, isPublic) => {
+          await saveTeam(name, isPublic);
+          showToast(isEditing ? 'Team updated!' : 'Team saved!', 'success');
+        }}
+      />
     </DndContext>
   );
 }
