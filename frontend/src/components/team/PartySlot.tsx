@@ -2,6 +2,8 @@
 
 import Image from 'next/image';
 import { useDroppable } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { TeamPokemon } from '@/contexts/TeamContext';
 
 interface PartySlotProps {
@@ -11,19 +13,48 @@ interface PartySlotProps {
 }
 
 export function PartySlot({ index, pokemon, onRemove }: PartySlotProps) {
-  const { setNodeRef, isOver } = useDroppable({
+  // ポケモンがいる場合はSortable、空の場合はDroppable
+  const {
+    setNodeRef: setSortableRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `slot-${index}`,
+    data: { type: 'slot', position: index, pokemon },
+    disabled: !pokemon,
+  });
+
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: `slot-${index}`,
     data: { position: index },
+    disabled: !!pokemon,
   });
+
+  const setNodeRef = pokemon ? setSortableRef : setDroppableRef;
+
+  const style = pokemon
+    ? {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1,
+        zIndex: isDragging ? 10 : 1,
+      }
+    : {};
 
   return (
     <div
       ref={setNodeRef}
+      style={style}
       className={`
-        aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center relative transition-all
-        ${isOver ? 'border-blue-400 bg-blue-50 scale-105' : 'border-gray-300 bg-white'}
-        ${pokemon ? 'border-solid border-gray-200' : ''}
+        aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center relative transition-colors
+        ${isOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 bg-white'}
+        ${pokemon ? 'border-solid border-gray-200 cursor-grab' : ''}
+        ${isDragging ? 'border-blue-300' : ''}
       `}
+      {...(pokemon ? { ...attributes, ...listeners } : {})}
     >
       {pokemon ? (
         <>
@@ -38,9 +69,13 @@ export function PartySlot({ index, pokemon, onRemove }: PartySlotProps) {
             {pokemon.name}
           </p>
           <button
-            onClick={() => onRemove(index)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(index);
+            }}
             className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
             aria-label="Remove pokemon"
+            onPointerDown={(e) => e.stopPropagation()}
           >
             ×
           </button>

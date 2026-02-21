@@ -11,6 +11,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
 import { useTeam, TeamPokemon } from '@/contexts/TeamContext';
 import { useToast } from '@/contexts/ToastContext';
 import { PartySlot } from '@/components/team/PartySlot';
@@ -20,7 +21,8 @@ import { api } from '@/lib/api';
 const POKEMON_PER_PAGE = 24;
 
 export default function TeamBuilderPage() {
-  const { party, addPokemon, removePokemon, clearTeam } = useTeam();
+  const { party, addPokemon, removePokemon, movePokemon, clearTeam } =
+    useTeam();
   const { showToast } = useToast();
 
   const [activePokemon, setActivePokemon] = useState<TeamPokemon | null>(null);
@@ -73,6 +75,8 @@ export default function TeamBuilderPage() {
     const { data } = event.active;
     if (data.current?.pokemon) {
       setActivePokemon(data.current.pokemon);
+    } else if (data.current?.type === 'slot' && data.current?.pokemon) {
+      setActivePokemon(data.current.pokemon);
     }
   };
 
@@ -82,8 +86,22 @@ export default function TeamBuilderPage() {
 
     if (!over) return;
 
-    const pokemon = active.data.current?.pokemon as TeamPokemon;
-    const position = over.data.current?.position as number;
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    // スロット同士の入れ替え
+    if (activeData?.type === 'slot' && overData?.position !== undefined) {
+      const fromPosition = activeData.position as number;
+      const toPosition = overData.position as number;
+      if (fromPosition !== toPosition) {
+        movePokemon(fromPosition, toPosition);
+      }
+      return;
+    }
+
+    // ポケモンリスト → スロットへのドロップ
+    const pokemon = activeData?.pokemon as TeamPokemon;
+    const position = overData?.position as number;
 
     if (pokemon && position !== undefined) {
       const success = addPokemon(pokemon, position);
@@ -103,6 +121,8 @@ export default function TeamBuilderPage() {
     setPage(newPage);
     fetchPokemon(newPage, search);
   };
+
+  const slotIds = Array.from({ length: 6 }, (_, i) => `slot-${i}`);
 
   return (
     <DndContext
@@ -130,16 +150,18 @@ export default function TeamBuilderPage() {
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
               Your Party ({party.filter(Boolean).length}/6)
             </h2>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <PartySlot
-                  key={index}
-                  index={index}
-                  pokemon={party[index]}
-                  onRemove={removePokemon}
-                />
-              ))}
-            </div>
+            <SortableContext items={slotIds} strategy={rectSwappingStrategy}>
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <PartySlot
+                    key={index}
+                    index={index}
+                    pokemon={party[index]}
+                    onRemove={removePokemon}
+                  />
+                ))}
+              </div>
+            </SortableContext>
           </section>
 
           {/* Type Coverage placeholder */}
