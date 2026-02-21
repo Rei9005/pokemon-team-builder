@@ -6,6 +6,9 @@ const mockOnSave = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  Object.assign(navigator, {
+    clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+  });
 });
 
 describe('SaveTeamModal', () => {
@@ -65,8 +68,8 @@ describe('SaveTeamModal', () => {
     expect(mockOnSave).not.toHaveBeenCalled();
   });
 
-  it('calls onSave with name and isPublic when valid', async () => {
-    mockOnSave.mockResolvedValue(undefined);
+  it('closes modal directly when saving a private team', async () => {
+    mockOnSave.mockResolvedValue({ shareId: null });
     render(
       <SaveTeamModal
         isOpen={true}
@@ -81,7 +84,98 @@ describe('SaveTeamModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledWith('My Team', false);
+      expect(mockOnClose).toHaveBeenCalled();
     });
+  });
+
+  it('shows share step when saving a public team', async () => {
+    mockOnSave.mockResolvedValue({ shareId: 'abc123' });
+    render(
+      <SaveTeamModal
+        isOpen={true}
+        isEditing={false}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+    fireEvent.change(screen.getByPlaceholderText('e.g. My Awesome Team'), {
+      target: { value: 'Public Team' },
+    });
+    // Toggle public
+    const toggle = screen
+      .getByText('Make this team public')
+      .closest('label')!
+      .querySelector('div')!;
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Team Saved!')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('http://localhost/teams/abc123')
+      ).toBeInTheDocument(); 
+    });
+  });
+
+  it('copies share URL when Copy button is clicked', async () => {
+    mockOnSave.mockResolvedValue({ shareId: 'abc123' });
+    render(
+      <SaveTeamModal
+        isOpen={true}
+        isEditing={false}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+    fireEvent.change(screen.getByPlaceholderText('e.g. My Awesome Team'), {
+      target: { value: 'Public Team' },
+    });
+    const toggle = screen
+      .getByText('Make this team public')
+      .closest('label')!
+      .querySelector('div')!;
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Team Saved!')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /copy/i }));
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        'http://localhost/teams/abc123'
+      );
+    });
+  });
+
+  it('closes modal when Done is clicked on share step', async () => {
+    mockOnSave.mockResolvedValue({ shareId: 'abc123' });
+    render(
+      <SaveTeamModal
+        isOpen={true}
+        isEditing={false}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+    fireEvent.change(screen.getByPlaceholderText('e.g. My Awesome Team'), {
+      target: { value: 'Public Team' },
+    });
+    const toggle = screen
+      .getByText('Make this team public')
+      .closest('label')!
+      .querySelector('div')!;
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Team Saved!')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /done/i }));
+    expect(mockOnClose).toHaveBeenCalled();
   });
 
   it('calls onClose when cancel is clicked', () => {
@@ -116,4 +210,3 @@ describe('SaveTeamModal', () => {
     ).toBeInTheDocument();
   });
 });
-
