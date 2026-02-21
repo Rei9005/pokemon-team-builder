@@ -19,14 +19,17 @@ interface TeamContextType {
   party: PartySlot[];
   currentTeamId: string | null;
   isEditing: boolean;
-  
+
   // Actions
   addPokemon: (pokemon: TeamPokemon, position: number) => boolean;
   removePokemon: (position: number) => void;
   movePokemon: (fromPosition: number, toPosition: number) => void;
   loadTeam: (teamId: string) => Promise<void>;
   clearTeam: () => void;
-  saveTeam: (name: string, isPublic: boolean) => Promise<void>;
+  saveTeam: (
+    name: string,
+    isPublic: boolean
+  ) => Promise<{ shareId?: string | null }>;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -37,24 +40,17 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const isEditing = currentTeamId !== null;
 
-  // Add pokemon to specific position
-  // Add pokemon to specific position
   const addPokemon = (pokemon: TeamPokemon, position: number): boolean => {
-    // Validation: position must be 0-5
-    if (position < 0 || position > 5) {
-      return false;
-    }
+    if (position < 0 || position > 5) return false;
 
-    // Use functional update to check duplicates with latest state
     let success = false;
     setParty((prevParty) => {
-      // Validation: check for duplicates
       const isDuplicate = prevParty.some(
         (slot) => slot !== null && slot.id === pokemon.id
       );
       if (isDuplicate) {
         success = false;
-        return prevParty; // No change
+        return prevParty;
       }
 
       const newParty = [...prevParty];
@@ -65,7 +61,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     return success;
   };
 
-  // Remove pokemon from position
   const removePokemon = (position: number) => {
     if (position < 0 || position > 5) return;
 
@@ -76,7 +71,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Move pokemon from one position to another
   const movePokemon = (fromPosition: number, toPosition: number) => {
     if (
       fromPosition < 0 ||
@@ -96,13 +90,12 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Load existing team
   const loadTeam = async (teamId: string) => {
     try {
       const team = await api.getTeam(teamId);
-      
+
       const newParty: PartySlot[] = Array(6).fill(null);
-      
+
       team.pokemon.forEach((tp) => {
         if (tp.pokemon && tp.position >= 0 && tp.position < 6) {
           newParty[tp.position] = {
@@ -123,16 +116,19 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Clear party
   const clearTeam = () => {
     setParty(Array(6).fill(null));
     setCurrentTeamId(null);
   };
 
-  // Save team
-  const saveTeam = async (name: string, isPublic: boolean) => {
+  const saveTeam = async (
+    name: string,
+    isPublic: boolean
+  ): Promise<{ shareId?: string | null }> => {
     const pokemonInParty = party
-      .map((slot, index) => (slot ? { pokemonId: slot.id, position: index } : null))
+      .map((slot, index) =>
+        slot ? { pokemonId: slot.id, position: index } : null
+      )
       .filter((p): p is { pokemonId: number; position: number } => p !== null);
 
     if (pokemonInParty.length === 0) {
@@ -141,20 +137,20 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
     try {
       if (isEditing && currentTeamId) {
-        // Update existing team
-        await api.updateTeam(currentTeamId, {
+        const updated = await api.updateTeam(currentTeamId, {
           name,
           isPublic,
           pokemon: pokemonInParty,
         });
+        return { shareId: updated.shareId };
       } else {
-        // Create new team
         const team = await api.createTeam({
           name,
           isPublic,
           pokemon: pokemonInParty,
         });
         setCurrentTeamId(team.id);
+        return { shareId: team.shareId };
       }
     } catch (error) {
       console.error('Failed to save team:', error);

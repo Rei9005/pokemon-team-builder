@@ -178,7 +178,7 @@ export default function TeamBuilderPage() {
     >
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-8">
             <button
               onClick={() => {
                 if (!user) {
@@ -308,13 +308,15 @@ export default function TeamBuilderPage() {
           </div>
         )}
       </DragOverlay>
+
       <SaveTeamModal
         isOpen={isSaveModalOpen}
         isEditing={isEditing}
         onClose={() => setIsSaveModalOpen(false)}
         onSave={async (name, isPublic) => {
-          await saveTeam(name, isPublic);
+          const result = await saveTeam(name, isPublic);
           showToast(isEditing ? 'Team updated!' : 'Team saved!', 'success');
+          return result;
         }}
       />
     </DndContext>

@@ -243,6 +243,39 @@ describe('TeamService', () => {
         ForbiddenException,
       );
     });
+
+    it('should populate pokemon data from cache', async () => {
+      const mockTeam = {
+        id: teamId,
+        userId,
+        name: 'Team',
+        isPublic: false,
+        shareId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemon: [
+          {
+            id: 'tp-1',
+            teamId,
+            pokemonId: 1,
+            position: 0,
+            createdAt: new Date(),
+          },
+        ],
+      };
+
+      mockPrismaService.team.findUnique.mockResolvedValue(mockTeam);
+
+      const result = await service.findOne(teamId, userId);
+
+      expect(result.pokemon[0].pokemon).toEqual({
+        id: 1,
+        name: 'Pokemon 1',
+        nameEn: 'pokemon-1',
+        types: ['normal'],
+        sprite: 'https://example.com/sprites/1.png',
+      });
+    });
   });
 
   describe('findByShareId', () => {
@@ -296,6 +329,39 @@ describe('TeamService', () => {
       await expect(service.findByShareId(shareId)).rejects.toThrow(
         ForbiddenException,
       );
+    });
+
+    it('should populate pokemon data from cache', async () => {
+      const mockTeam = {
+        id: 'team-id',
+        userId: 'user-id',
+        name: 'Public Team',
+        isPublic: true,
+        shareId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemon: [
+          {
+            id: 'tp-1',
+            teamId: 'team-id',
+            pokemonId: 4,
+            position: 0,
+            createdAt: new Date(),
+          },
+        ],
+      };
+
+      mockPrismaService.team.findUnique.mockResolvedValue(mockTeam);
+
+      const result = await service.findByShareId(shareId);
+
+      expect(result.pokemon[0].pokemon).toEqual({
+        id: 4,
+        name: 'Pokemon 4',
+        nameEn: 'pokemon-4',
+        types: ['normal'],
+        sprite: 'https://example.com/sprites/4.png',
+      });
     });
   });
 
