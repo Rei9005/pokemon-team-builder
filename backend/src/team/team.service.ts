@@ -185,7 +185,39 @@ export class TeamService {
       throw new ForbiddenException('This team is not public');
     }
 
-    return team;
+    // Populate pokemon data from cache
+    const pokemonWithData = team.pokemon.map((tp) => {
+      const pokemonData = this.pokemonService.getByIdFromCache(tp.pokemonId);
+
+      if (!pokemonData) {
+        return {
+          ...tp,
+          pokemon: {
+            id: tp.pokemonId,
+            name: `Pokemon #${tp.pokemonId}`,
+            nameEn: `pokemon-${tp.pokemonId}`,
+            types: [],
+            sprite: '',
+          },
+        };
+      }
+
+      return {
+        ...tp,
+        pokemon: {
+          id: pokemonData.id,
+          name: pokemonData.name,
+          nameEn: pokemonData.nameEn,
+          types: pokemonData.types,
+          sprite: pokemonData.sprite,
+        },
+      };
+    });
+
+    return {
+      ...team,
+      pokemon: pokemonWithData,
+    };
   }
 
   async update(teamId: string, userId: string, dto: UpdateTeamDto) {
