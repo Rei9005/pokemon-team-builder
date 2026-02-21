@@ -109,9 +109,9 @@ export default function TeamBuilderPage() {
   }, [party, showToast]);
 
   // Initial load
-  useState(() => {
+  useEffect(() => {
     fetchPokemon(1, '');
-  });
+  }, [fetchPokemon]);
 
   useEffect(() => {
     fetchTypeCoverage();

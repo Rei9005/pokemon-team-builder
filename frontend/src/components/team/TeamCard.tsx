@@ -1,5 +1,8 @@
 'use client';
 
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useTeam } from '@/contexts/TeamContext';
 import { useToast } from '@/contexts/ToastContext';
 import type { Team } from '@/types/team';
 
@@ -9,21 +12,26 @@ interface TeamCardProps {
 }
 
 export function TeamCard({ team, onDelete }: TeamCardProps) {
+  const router = useRouter();
+  const { loadTeam } = useTeam();
   const { showToast } = useToast();
+
+  const handleEditClick = async () => {
+    try {
+      await loadTeam(team.id);
+      router.push('/team-builder');
+    } catch (err) {
+      showToast('Failed to load team. Please try again.', 'error');
+    }
+  };
+
   const handleShareClick = () => {
     if (!team.shareId) {
       showToast('This team is not public', 'warning');
       return;
     }
-
-    const shareUrl = `${window.location.origin}/teams/${team.shareId}`;
-    navigator.clipboard.writeText(shareUrl);
-    showToast('Share link copied to clipboard!', 'success');
-  };
-
-  const handleEditClick = () => {
-    // Navigate to team builder with team ID
-    window.location.href = `/team-builder?teamId=${team.id}`;
+    // Navigate to the shared team page
+    router.push(`/teams/${team.shareId}`);
   };
 
   const handleDeleteClick = () => {
@@ -34,7 +42,7 @@ export function TeamCard({ team, onDelete }: TeamCardProps) {
 
   return (
     <div className="border rounded-lg p-4 bg-white shadow hover:shadow-lg transition-shadow">
-      {/* Header: Team name and public status */}
+      {/* Header */}
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-xl font-bold truncate flex-1" title={team.name}>
           {team.name}
@@ -50,19 +58,20 @@ export function TeamCard({ team, onDelete }: TeamCardProps) {
           .sort((a, b) => a.position - b.position)
           .map((tp) => (
             <div key={tp.id} className="relative group">
-              <img
+              <Image
                 src={tp.pokemon.sprite}
                 alt={tp.pokemon.name}
+                width={48}
+                height={48}
                 className="w-12 h-12"
                 title={tp.pokemon.name}
               />
-              {/* Tooltip on hover */}
               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                 {tp.pokemon.name}
               </div>
             </div>
           ))}
-        
+
         {/* Empty slots */}
         {Array.from({ length: 6 - team.pokemon.length }).map((_, i) => (
           <div
@@ -87,7 +96,7 @@ export function TeamCard({ team, onDelete }: TeamCardProps) {
         >
           Edit
         </button>
-        
+
         {team.shareId && (
           <button
             onClick={handleShareClick}
@@ -96,7 +105,7 @@ export function TeamCard({ team, onDelete }: TeamCardProps) {
             Share
           </button>
         )}
-        
+
         <button
           onClick={handleDeleteClick}
           className="bg-red-600 text-white py-2 px-3 rounded hover:bg-red-700 transition-colors text-sm font-medium"
