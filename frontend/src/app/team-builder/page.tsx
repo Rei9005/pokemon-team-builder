@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import {
   DndContext,
@@ -16,7 +16,8 @@ import { useTeam, TeamPokemon } from '@/contexts/TeamContext';
 import { useToast } from '@/contexts/ToastContext';
 import { PartySlot } from '@/components/team/PartySlot';
 import { DraggablePokemonCard } from '@/components/team/DraggablePokemonCard';
-import { api } from '@/lib/api';
+import { api, fetchApi } from '@/lib/api';
+import { TypeCoverageChart } from '@/components/team/TypeCoverageChart';
 
 const POKEMON_PER_PAGE = 24;
 
@@ -31,6 +32,12 @@ export default function TeamBuilderPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [typeCoverage, setTypeCoverage] = useState<{
+    defensive: Record<string, number>;
+    weaknessCount: number;
+    resistanceCount: number;
+    immunityCount: number;
+  } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -66,10 +73,38 @@ export default function TeamBuilderPage() {
     [showToast]
   );
 
+  const fetchTypeCoverage = useCallback(async () => {
+    const pokemonIds = party.filter(Boolean).map((p) => p!.id);
+
+    if (pokemonIds.length === 0) {
+      setTypeCoverage(null);
+      return;
+    }
+
+    try {
+      const data = await fetchApi<{
+        defensive: Record<string, number>;
+        weaknessCount: number;
+        resistanceCount: number;
+        immunityCount: number;
+      }>('/types/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ pokemonIds }),
+      });
+      setTypeCoverage(data);
+    } catch {
+      showToast('Failed to analyze type coverage', 'error');
+    }
+  }, [party, showToast]);
+
   // Initial load
   useState(() => {
     fetchPokemon(1, '');
   });
+
+  useEffect(() => {
+    fetchTypeCoverage();
+  }, [fetchTypeCoverage]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { data } = event.active;
@@ -164,14 +199,18 @@ export default function TeamBuilderPage() {
             </SortableContext>
           </section>
 
-          {/* Type Coverage placeholder */}
+          {/* Type Coverage */}
           <section className="mb-8 bg-white rounded-xl p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
               Type Coverage
             </h2>
-            <p className="text-gray-400 text-sm">
-              Add Pokémon to your party to see type coverage.
-            </p>
+            {typeCoverage ? (
+              <TypeCoverageChart data={typeCoverage} />
+            ) : (
+              <p className="text-gray-400 text-sm">
+                Add Pokémon to your party to see type coverage.
+              </p>
+            )}
           </section>
 
           {/* Pokemon List */}
